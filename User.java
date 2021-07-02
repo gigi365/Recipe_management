@@ -1,0 +1,406 @@
+import java.util.*;
+
+public class User {
+	public static ArrayList<User> users = new ArrayList<User>();
+	public static User defaultUser = new User("default User", "reader");
+
+	private String role;
+	public String username;
+
+	public User(String username, String role) {
+		this.role = role;
+		this.username = username;
+	}
+
+	public static void main(String[] args) {
+		Scanner scanner = new Scanner(System.in);
+		String input;
+		User user = defaultUser;
+		
+		boolean checkInput = false;
+		String username = "";
+
+		while(true) {
+			// sign up or log in
+			while (!checkInput) {
+				System.out.println("Enter username or 'sign up': ");
+				input = scanner.nextLine();
+				
+				if (input.equals("sign up")) {
+					// sign up
+					System.out.println("Username: ");
+					String tempUsername = scanner.nextLine();
+					System.out.println();
+					
+					// check that username is not already in use
+					while (checkUsernames(tempUsername)) {
+						System.out.println("Sorry this username is already in use. Try another.");
+				   		System.out.print("Username: ");
+						tempUsername = scanner.nextLine();
+						System.out.println();
+					}
+					
+					String tempRole = " ";
+					while(!tempRole.equals("writer") && !tempRole.equals("reader")) {
+						System.out.print("Are you a writer or reader? ");
+						tempRole = scanner.nextLine();
+						System.out.println();
+					}
+
+					signUp(tempUsername, tempRole);
+					checkInput = true;
+					username = tempUsername;
+				} else { // login
+					// check if user exists
+					if (!checkUsernames(input)) {
+						System.out.println("Sorry this user does not exist");
+					} else {
+						checkInput = true;
+						username = input;
+					}
+				}
+
+				// access user
+				for (User tempUser: users) {
+					if (tempUser.getUsername().equals(username)) {
+						user = tempUser;
+						break;
+					}
+				}
+			}
+			if (user == null) {
+				System.out.println("Sorry an error occurred.");
+				break;
+			}
+
+			// actions
+			String action = "";
+			if (user.getRole().equals("writer")) {
+				while (!action.equals("add") && !action.equals("edit") && !action.equals("search")) {
+					System.out.print("Would you like to 'add', 'edit', or 'search' for a recipe? ");
+					action = scanner.nextLine();
+					System.out.println();
+				}
+				if (action.equals("edit")) editRecipe();
+				if (action.equals("search")) searchRecipe();
+				if (action.equals("add")) addRecipe();
+			} else if (user.getRole().equals("reader")) {
+				searchRecipe();
+			}
+
+			// log out
+			String exitAction = "";
+			while(!exitAction.equals("continue") && !exitAction.equals("logout")) {
+				System.out.print("Would you like 'logout' or 'continue' looking through the recipe book? ");
+				exitAction = scanner.nextLine();
+				System.out.println();
+			}
+			if (exitAction.equals("logout")) {
+				checkInput = false;
+				String exitInput = "";
+				while(!exitInput.equals("yes") && !exitInput.equals("no")) {
+					System.out.println("Do you want to exit the application? ");
+					exitInput = scanner.nextLine();
+				}
+				if (exitInput.equals("yes")) break;
+			}
+		}
+	}
+
+	private static void addRecipe() {
+		Scanner scanner = new Scanner(System.in);
+
+		System.out.println("What is the name of the recipe?");
+		String name = scanner.nextLine();
+		System.out.println("\nWhat are the main ingredients of the recipe?");
+		String mainIngredients = scanner.nextLine();
+		System.out.println("\nWhat are the optional ingredients?");
+		String optionalIngredients = scanner.nextLine();
+		System.out.println("\nInstructions for making the recipe:");
+		String desc = scanner.nextLine();
+		
+		int time = 0;
+		while(time <= 0) {
+			System.out.println("\nHow much time does it take to make? ");
+			String input = scanner.nextLine();
+			try {
+				time = Integer.parseInt(input);
+				break;
+			} catch (NumberFormatException e) {
+				System.out.println("Sorry this is not a number.");
+			}
+		}
+
+		int rating = 0;
+		while(rating <= 0) {
+			System.out.println("\nWhat would you rate this recipe (1-5)? ");
+			String input = scanner.nextLine();
+			System.out.println();
+			try{
+				rating = Integer.parseInt(input);
+				break;
+			} catch (NumberFormatException e) {
+				System.out.println("Sorry that is not a number.");
+			}
+		}
+
+		// create recipe
+		Recipes recipe = new Recipes(name, mainIngredients, optionalIngredients, desc, time, rating);
+		System.out.println("Recipe Added.");
+		System.out.println();
+	}
+
+	private static void editRecipe() {
+		Scanner scanner = new Scanner(System.in);
+
+		// find recipe first
+		Recipes recipe = Recipes.defaultRecipe;
+		while(true) {
+			System.out.print("What recipe would you like to edit (referece recipe ID or name)? ");
+			String input = scanner.nextLine();
+			System.out.println();
+			
+			boolean foundRecipe = false;
+			for (Recipes tempRecipe: Recipes.recipes) {
+				if (Integer.toString(tempRecipe.getID()).equals(input) || tempRecipe.getName().equals(input)) {
+					recipe = tempRecipe;
+					foundRecipe = true;
+					break;
+				}
+			}
+			if (foundRecipe) break;
+		}
+
+		// action
+		boolean exit = false;
+		
+		while(!exit) {
+			int actionNum = 0;
+			recipe.displayRecipe();
+			System.out.println();
+			System.out.println("Which section would you like to edit? ");
+			System.out.println("[1] Name");
+			System.out.println("[2] Main Ingredients");
+			System.out.println("[3] Optional Ingredients");
+			System.out.println("[4] Description");
+			System.out.println("[5] Time");
+			System.out.println("[6] Rating");
+
+			while(actionNum < 1 || actionNum > 6) {	
+				System.out.print("Enter the number of your choice: ");
+				String input = scanner.nextLine();
+				System.out.println();
+				try {
+					actionNum = Integer.parseInt(input);
+				} catch (NumberFormatException e) {
+					System.out.println("Sorry this is not a number");
+				}
+			}
+
+			System.out.println("What would you like to change it to? ");
+			String changeText = scanner.nextLine();
+			int changeInt = 0;
+
+			if (actionNum == 5 || actionNum == 6) {
+				while(true) {
+					try {
+						changeInt = Integer.parseInt(changeText);
+						break;
+					} catch (NumberFormatException e) {
+						System.out.println("Time or Rating needs to be a number.");
+					}
+					System.out.println("What would you like to change it to? ");
+					changeText = scanner.nextLine();
+				}
+			}
+
+
+			// choice to action
+			switch (actionNum) {
+				case 1:
+					recipe.editName(changeText);
+					System.out.println("done.");
+					break;
+				case 2:
+					recipe.editMainIngredients(changeText);
+					System.out.println("done.");
+					break;
+				case 3:
+					recipe.editOptionalIngredients(changeText);
+					System.out.println("done.");
+					break;
+				case 4:
+					recipe.editDesc(changeText);
+					System.out.println("done.");
+					break;
+				case 5:
+					recipe.editTime(changeInt);
+					System.out.println("done.");
+					break;
+				case 6:
+					recipe.editRating(changeInt);
+					System.out.println("done.");
+					break;
+			}
+
+			System.out.println();
+			System.out.println("Recipe is now:");
+			recipe.displayRecipe();
+			System.out.println();
+
+			// choice to exit
+			String choice = "";
+			while(!choice.equals("exit") && !choice.equals("continue")) {
+				System.out.print("Would you like to 'exit' or 'continue' with the current recipe? ");
+				choice = scanner.nextLine();
+				System.out.println();
+			}
+			if (choice.equals("exit")) exit = true;
+		}
+	}
+
+	public static void searchByName() {
+		Scanner scanner = new Scanner(System.in);
+		while (true) {
+			System.out.println("What is the name of the recipe you'd like to see? ");
+			String recipeName = scanner.nextLine();
+			System.out.println();
+			
+			// look for the recipe
+			Recipes recipe = Recipes.defaultRecipe;
+			boolean found = false;
+			for (Recipes tempRecipe: Recipes.recipes) {
+				if (tempRecipe.getName().equals(recipeName)) {
+					recipe = tempRecipe;
+					found = true;
+				}
+			}
+			if (!found) {
+				System.out.println("Sorry could not find this recipe.");
+				System.out.println();
+			} else {
+				recipe.displayRecipe();
+				System.out.println();
+			}
+
+			String choice = "";
+			while(!choice.equals("exit") && !choice.equals("continue")) {
+				System.out.print("Would you like to 'exit' or 'continue' to find another recipe by name? ");
+				choice = scanner.nextLine();
+				System.out.println();
+			}
+			if (choice.equals("exit")) break;
+		}
+	}
+
+	public static void searchByIngredients() {
+		Scanner scanner = new Scanner(System.in);
+		
+		System.out.println("What ingredients are you searching for?");
+		String input = scanner.nextLine();
+
+		ArrayList<String> ingredients = new ArrayList<String>();
+		int startIndex = 0;
+		for (int i = 0; i < input.length(); i ++) {
+			if (input.charAt(i) == ',' || i+1 == input.length()) {
+				while(startIndex < input.length() && input.charAt(startIndex) == ' ') startIndex++;
+				int endIndex = i-1;
+				if (i+1 == input.length()) endIndex ++;
+				while(input.charAt(endIndex) == ' ') endIndex--;
+				ingredients.add(input.substring(startIndex, endIndex+1));
+				startIndex = i+1;
+			}
+		}
+		
+		// choose two recipes with user's ingredients if any
+		ArrayList<Recipes> chosenRecipes = new ArrayList<Recipes>();
+		for (Recipes recipe: Recipes.recipes) {
+			if (recipe.getMainIngredients().equals(ingredients)) chosenRecipes.add(recipe);
+			if (chosenRecipes.size() >= 2) break;
+		}
+		for (Recipes recipe: chosenRecipes) {
+			recipe.displayRecipe();
+			System.out.println();
+		}
+
+		if (chosenRecipes.size() == 0) {
+			System.out.println("Sorry there are none with these ingredients.");
+			System.out.println();
+		}
+	}
+
+	public static void searchByTime() {
+		Scanner scanner = new Scanner(System.in);
+
+		int time;
+		while(true) {
+			System.out.print("How much time in minutes? ");
+			String input = scanner.next();
+			System.out.println();
+
+			try {
+				time = Integer.parseInt(input);
+				break;
+			} catch (NumberFormatException e) {
+				System.out.println("Sorry that is not a number.");
+			}
+		}
+
+		// get array of recipes sorted by time 
+		ArrayList<Recipes> sortedRecipes = Recipes.getSortByTime(time);
+		for (Recipes recipe: sortedRecipes) {
+			recipe.displayRecipe();
+			System.out.println();
+		}
+
+		if (sortedRecipes.size() == 0) {
+			System.out.println("Sorry there are no recipes with cook time less than or equal to this time.");
+			System.out.println();
+		}
+	}
+
+	public static void searchRecipe() {
+		Scanner scanner = new Scanner(System.in);
+
+		String searchFilter = "";
+		while(!searchFilter.equals("name") && !searchFilter.equals("ingredients") && !searchFilter.equals("time")) {
+			System.out.println("There are three options for searching: ");
+			System.out.println("'name': search a specific recipe by name");
+			System.out.println("'ingredients': select ingredients and find recipes that match");
+			System.out.println("'time': find recipes by how much time it takes to make");
+			System.out.println();
+			System.out.print("Search by 'name', 'ingredients', or 'time'? ");
+			searchFilter = scanner.next();
+			System.out.println();
+			System.out.println();
+		}
+
+		if (searchFilter.equals("name")) {
+			searchByName();
+		} else if (searchFilter.equals("ingredients")) {
+			searchByIngredients();
+		} else {
+			searchByTime();
+		}
+	}
+
+	private static boolean checkUsernames(String username) {
+		for (User user: users) {
+			if (user.getUsername().equals(username)) return true;
+		}
+		return false;
+	}
+
+	public static void signUp(String username, String tempRole) {
+		User user = new User(username, tempRole);
+		users.add(user);
+	}
+
+	public String getUsername() {
+		return this.username;
+	}
+
+	public String getRole() {
+		return this.role;
+	}
+}
